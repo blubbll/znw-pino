@@ -43,17 +43,32 @@ client.on("guildMemberAdd", member => {
 
         chnl.setName("𝙛𝙡𝙤𝙬 ▶");
         chnl.send(new Discord.RichEmbed()
-            .setDescription(`▶ <@${member.id}>(${member.user.username}#${member.user.discriminator}) with invite ${invite.code}.`)
+            .setDescription(`▶ <@${member.id}>(${member.user.username}#${member.user.discriminator})`)
             .setColor("#00aba9")
         );
 
         if (invite.code === "UgaKDjS") {
             const currch = client.channels.get(invite.channel.id);
             const gamename = "Cube World";
-            currch.send(new Discord.RichEmbed()
-                .setDescription(`🌟 Another ${gamename} player! All greet <@${member.id}> ❕`)
-                .setColor("#FFD700") //gold
-            );
+            const gamerole = "cw";
+
+            var hereRole = member.guild.roles.find(r => r.name === gamerole);
+
+            currch.send({
+                embed: new Discord.RichEmbed()
+                    .setDescription(`👋 Another <@&${hereRole.id}>(${gamename}) player! All greet <@${member.id}>❕`)
+                    .setColor("#FFD700") //gold
+
+            }).then(embed => {
+                embed.react("👋");
+              
+                setTimeout(function(){
+                 member.addRole(hereRole.id);
+
+                },500)
+              
+            });
+
 
         }
 
@@ -65,7 +80,6 @@ client.on("guildMemberAdd", member => {
 
 client.on("guildMemberRemove", member => {
     const chnl = client.channels.get(client.settings.flowChannel);
-    console.log(member)
     chnl.setName("𝙛𝙡𝙤𝙬 ◀");
     chnl.send(new Discord.RichEmbed()
         .setDescription(`◀ (${member.user.username}#${member.user.discriminator})`)
@@ -97,7 +111,6 @@ client.on("message", message => {
 });
 
 client.login(discord_token);
-
 
 const updateWelcome = () => {
     const chnl = client.channels.get(client.settings.welcomeChannel);
@@ -228,45 +241,49 @@ const initRoles = (first) => {
             } = event;
             const user = client.users.get(data.user_id);
 
-            const message = await chn.fetchMessage(data.message_id);
+            try {
+                const message = await chn.fetchMessage(data.message_id);
 
-            //only in assign channel
-            if (message.channel !== chn) return;
+                //only in assign channel
+                if (message.channel !== chn) return;
 
-            const member = srv.members.get(user.id);
+                const member = srv.members.get(user.id);
 
-            const emojiKey = (data.emoji.id) ? `${data.emoji.name}:${data.emoji.id}` : data.emoji.name;
-            let reaction = message.reactions.get(emojiKey);
+                const emojiKey = (data.emoji.id) ? `${data.emoji.name}:${data.emoji.id}` : data.emoji.name;
+                let reaction = message.reactions.get(emojiKey);
 
-            if (!reaction) {
-                // Create an object that can be passed through the event like normal
-                const emoji = new Discord.Emoji(client.guilds.get(data.guild_id), data.emoji);
-                reaction = new Discord.MessageReaction(message, emoji, 1, data.user_id === client.user.id);
-            }
-
-            if (
-                (message.author.id === client.user.id) && (message.content !== CONFIG.initialMessage ||
-                    (message.embeds[0]))
-            ) {
-
-                let role = message.content.replace(/[^0-9 a-z]/gi, '').trim() //`${message.content.split("⤙")[1].split("⤚")[0]}`;
-                if (role === "Cube World") role = "cw";
-
-                if (member.id !== client.user.id) {
-
-                    const guildRole = message.guild.roles.find(r => r.name === role);
-                    //if (event.t === "MESSAGE_REACTION_ADD") member.addRole(guildRole.id);
-                    //else if (event.t === "MESSAGE_REACTION_REMOVE") member.removeRole(guildRole.id);
-
-                    if (member.roles.has(guildRole.id))
-                        member.removeRole(guildRole.id);
-                    else member.addRole(guildRole.id);
-
-                    chn.setName("𝙖𝙨𝙨𝙞𝙜𝙣𝙢𝙚𝙣𝙩")
-                    initRoles(false);
-
+                if (!reaction) {
+                    // Create an object that can be passed through the event like normal
+                    const emoji = new Discord.Emoji(client.guilds.get(data.guild_id), data.emoji);
+                    reaction = new Discord.MessageReaction(message, emoji, 1, data.user_id === client.user.id);
                 }
-                chn.setName("𝘢𝘴𝘴𝘪𝘨𝘯𝘮𝘦𝘯𝘵");
+
+                if (
+                    (message.author.id === client.user.id) && (message.content !== CONFIG.initialMessage ||
+                        (message.embeds[0]))
+                ) {
+
+                    let role = message.content.replace(/[^0-9 a-z]/gi, '').trim() //`${message.content.split("⤙")[1].split("⤚")[0]}`;
+                    if (role === "Cube World") role = "cw";
+
+                    if (member.id !== client.user.id) {
+
+                        const guildRole = message.guild.roles.find(r => r.name === role);
+                        //if (event.t === "MESSAGE_REACTION_ADD") member.addRole(guildRole.id);
+                        //else if (event.t === "MESSAGE_REACTION_REMOVE") member.removeRole(guildRole.id);
+
+                        if (member.roles.has(guildRole.id))
+                            member.removeRole(guildRole.id);
+                        else member.addRole(guildRole.id);
+
+                        chn.setName("𝙖𝙨𝙨𝙞𝙜𝙣𝙢𝙚𝙣𝙩")
+                        initRoles(false);
+
+                    }
+                    chn.setName("𝘢𝘴𝘴𝘪𝘨𝘯𝘮𝘦𝘯𝘵");
+                }
+            } catch (ex) {
+
             }
         });
 }
@@ -277,8 +294,6 @@ process.on('unhandledRejection', err => {
     const msg = err.stack.replace(new RegExp(`${__dirname}/`, 'g'), './');
     console.error("Unhandled Rejection", msg);
 });
-
-
 
 // Initialize the invite cache
 const invites = {};

@@ -1,0 +1,11 @@
+--2019-09-01 17:04:53--  https://test.io/wp-content/uploads/2019/02/testIO-logo-rgb-2.png
+Resolving test.io (test.io)... 104.20.102.122, 104.20.101.122, 2606:4700:10::6814:657a, ...
+Connecting to test.io (test.io)|104.20.102.122|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 5266 (5.1K) [image/png]
+Saving to: ‘testIO-logo-rgb-2.png’
+
+     0K .....                                                 100% 45.6M=0s
+
+2019-09-01 17:04:53 (45.6 MB/s) - ‘testIO-logo-rgb-2.png’ saved [5266/5266]
+
