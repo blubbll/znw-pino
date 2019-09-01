@@ -8,11 +8,8 @@ const app = express();
 const discord_token = process.env.TOKEN;
 const prefix = process.env.PREFIX;
 
-client.on("ready", () => {
-    console.log("Connected!");
-    updateWelcome();
-    initRoles();
-});
+// A pretty useful method to create a delay without blocking the whole script.
+const wait = require('util').promisify(setTimeout);
 
 app.get("/", (request, response) => {
     console.log("Ping received!");
@@ -54,28 +51,22 @@ client.on("guildMemberAdd", member => {
 
             var hereRole = member.guild.roles.find(r => r.name === gamerole);
 
-            currch.send({
-                embed: new Discord.RichEmbed()
-                    .setDescription(`👋 Another <@&${hereRole.id}>(${gamename}) player! All greet <@${member.id}>❕`)
-                    .setColor("#FFD700") //gold
+            member.addRole(hereRole.id).then(() => {
+                currch.send({
+                    embed: new Discord.RichEmbed()
+                        .setDescription(`👋 Another <@&${hereRole.id}>(${gamename}) player! All greet <@${member.id}>❕`)
+                        .setColor("#FFD700") //gold
 
-            }).then(embed => {
-                embed.react("👋");
-              
-                setTimeout(function(){
-                 member.addRole(hereRole.id);
+                });
 
-                },500)
-              
+
             });
+
+            setTimeout(() => chnl.setName("𝘧𝘭𝘰𝘸"), 4999);
 
 
         }
-
-        setTimeout(() => chnl.setName("𝘧𝘭𝘰𝘸"), 4999);
-
     });
-
 });
 
 client.on("guildMemberRemove", member => {
@@ -126,7 +117,7 @@ const updateWelcome = () => {
 
 //--------------------------------------------------COLORS BOT
 
-const initRoles = (first) => {
+const initAssigner = (first) => {
     const CONFIG = {
         /**
          * Instructions on how to get this: https://redd.it/40zgse
@@ -232,7 +223,7 @@ const initRoles = (first) => {
     };
 
     // This event handles adding/removing users from the role(s) they chose based on message reactions
-    if (first !== false)
+    if (first)
         client.on('raw', async event => {
             if (!events.hasOwnProperty(event.t)) return;
 
@@ -277,7 +268,7 @@ const initRoles = (first) => {
                         else member.addRole(guildRole.id);
 
                         chn.setName("𝙖𝙨𝙨𝙞𝙜𝙣𝙢𝙚𝙣𝙩")
-                        initRoles(false);
+                        initAssigner();
 
                     }
                     chn.setName("𝘢𝘴𝘴𝘪𝘨𝘯𝘮𝘦𝘯𝘵");
@@ -298,12 +289,14 @@ process.on('unhandledRejection', err => {
 // Initialize the invite cache
 const invites = {};
 
-// A pretty useful method to create a delay without blocking the whole script.
-const wait = require('util').promisify(setTimeout);
 
 client.on('ready', () => {
     // "ready" isn't really ready. We need to wait a spell.
     wait(1000);
+
+    console.log("Connected!");
+    updateWelcome();
+    initAssigner(true);
 
     // Load all invites for all guilds and save them to the cache.
     client.guilds.forEach(g => {
