@@ -1,5 +1,5 @@
 const Discord = require("discord.js");
-const client = new Discord.Client();
+const bot = new Discord.Client();
 const fs = require("fs");
 const http = require("http");
 const express = require("express");
@@ -8,11 +8,8 @@ const app = express();
 const discord_token = process.env.TOKEN;
 const prefix = process.env.PREFIX;
 
-client.on("ready", () => {
-    console.log("Connected!");
-    updateWelcome();
-    initRoles();
-});
+// A pretty useful method to create a delay without blocking the whole script.
+const wait = require('util').promisify(setTimeout);
 
 app.get("/", (request, response) => {
     console.log("Ping received!");
@@ -26,16 +23,26 @@ setInterval(() => {
 }, 280000);
 
 /////////////////////////////////////////////////
-client.settings = {
+bot.settings = {
     //Server
     prefix: process.env.PREFIX,
     flowChannel: "610046168788893708",
     welcomeChannel: "615492208673554462",
-    roleChannel: "615505311041585163"
+    roleChannel: "615505311041585163",
+    feedbackChannel: "617798936408752150",
+    color: { //color for embeds
+        self: "#7e3878",
+        suc: "#00a300",
+        assign: "#f0a30a",
+        welcome: "#2d89ef",
+        flow_join: "#00aba9",
+        flow_leave: "#ff0097",
+        flow_game: "#FFD700" //gold
+    }
 }
 
-client.on("guildMemberAdd", member => {
-    const chnl = client.channels.get(client.settings.flowChannel);
+bot.on("guildMemberAdd", member => {
+    const chnl = bot.channels.get(bot.settings.flowChannel);
 
     // To compare, we need to load the current invite list.
     member.guild.fetchInvites().then(guildInvites => {
@@ -43,77 +50,183 @@ client.on("guildMemberAdd", member => {
 
         chnl.setName("𝙛𝙡𝙤𝙬 ▶");
         chnl.send(new Discord.RichEmbed()
-            .setDescription(`▶ <@${member.id}>(${member.user.username}#${member.user.discriminator}) with invite ${invite.code}.`)
-            .setColor("#00aba9")
+            .setDescription(`▶ <@${member.id}>(${member.user.username}#${member.user.discriminator})`)
+            .setColor(bot.settings.color.flow_join)
         );
 
         if (invite.code === "UgaKDjS") {
-            const currch = client.channels.get(invite.channel.id);
+            const currch = bot.channels.get(invite.channel.id);
             const gamename = "Cube World";
-            currch.send(new Discord.RichEmbed()
-                .setDescription(`🌟 Another ${gamename} player! All greet <@${member.id}> ❕`)
-                .setColor("#FFD700") //gold
-            );
+            const gamerole = "cw";
 
+            var hereRole = member.guild.roles.find(r => r.name === gamerole);
+
+            member.addRole(hereRole.id).then(() => {
+                currch.send(new Discord.RichEmbed()
+                    .setTitle(`Another ${gamename} player!`)
+                    .setDescription(`👋Welcome, <@${member.id}>`)
+                    .setColor(bot.settings.color.flow_game)
+                );
+            });
+
+            wait(4999);
+            resetFlow();
         }
-
-        setTimeout(() => chnl.setName("𝘧𝘭𝘰𝘸"), 4999);
-
     });
-
 });
 
-client.on("guildMemberRemove", member => {
-    const chnl = client.channels.get(client.settings.flowChannel);
-    console.log(member)
+bot.on("guildMemberRemove", member => {
+    const chnl = bot.channels.get(bot.settings.flowChannel);
     chnl.setName("𝙛𝙡𝙤𝙬 ◀");
     chnl.send(new Discord.RichEmbed()
         .setDescription(`◀ (${member.user.username}#${member.user.discriminator})`)
-        .setColor("#ff0097")
+        .setColor(bot.settings.color.flow_leave)
     );
 
-    setTimeout(() => chnl.setName("𝘧𝘭𝘰𝘸"), 4999);
+    wait(4999);
+    resetFlow();
 
 });
 
+const resetFlow = () => {
+    bot.channels.get(bot.settings.flowChannel).setName("𝘧𝘭𝘰𝘸");
+}
 
-client.on("message", message => {
+bot.on("message", message => {
+
     if (message.author.bot) return;
-    if (message.content.indexOf(prefix) !== 0) return;
+    //Text command
+    switch (message.channel.type) {
+        case 'text':
+            {
+                if (message.content.indexOf(prefix) !== 0) return;
+                // This is the best way to define args. Trust me.
+                const args = message.content.slice(prefix.length).trim().split(/ +/g);
+                const command = args.shift().toLowerCase();
 
-    console.log(message.content);
+                // The list of if/else is replaced with those simple 2 lines:
+                try {
+                    let commandFile = require(`./commands/${command}.js`);
+                    commandFile.run(bot, message, args);
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+            break;
+        case 'dm':
+        case 'group':
+            {
+                const ty = `Thank you for choosing ${bot.user.username} 💜`;
 
-    // This is the best way to define args. Trust me.
-    const args = message.content.slice(prefix.length).trim().split(/ +/g);
-    const command = args.shift().toLowerCase();
 
-    // The list of if/else is replaced with those simple 2 lines:
-    try {
-        let commandFile = require(`./commands/${command}.js`);
-        commandFile.run(client, message, args);
-    } catch (err) {
-        console.error(err);
+                //regular msg
+                if (message.attachments.size === 0) {
+                    bot.users.get(bot.settings.owner).send(new Discord.RichEmbed()
+                        .setTitle(`Neues Feedback von (${message.author.username}#${message.author.discriminator}).`)
+                        .setDescription(`${message.content}\n${'▁'.repeat(20)}\nKlick für Antwort: <@${message.author.id}>`)
+                        .setTimestamp()
+                        .setColor(bot.settings.color.self)
+                    );
+
+                    //reply for msg
+                    message.channel.send(new Discord.RichEmbed()
+                        .setTitle(`Your feedback has been sent.`)
+                        .setDescription(`("${message.content}")`)
+                        .setFooter(ty)
+                        .setColor(bot.settings.color.suc)
+                    );
+
+                }
+
+
+                //message has attachments
+                else if (message.attachments.size > 0) {
+
+                    message.attachments.forEach(attachment => {
+
+                        // do something with the attachment
+                        const url = attachment.url;
+                        const desc = attachment.message.content
+
+                        bot.users.get(bot.settings.owner).send({
+                            embed: new Discord.RichEmbed()
+                                .setTitle(`Anhang von (${message.author.username}#${message.author.discriminator}):`)
+                                .setDescription(`
+                                  Datei:
+                                    "${attachment.filename}"
+                                    ${'▔'.repeat(20)}
+                                    Nachricht:
+                                    ${'▔'.repeat(20)}\n${desc.length !== 0 ? desc : "(Keine Nachricht)"}
+                                    ${'▁'.repeat(20)}\nKlick für Antwort: <@${message.author.id}>`)
+                                .setTimestamp()
+                                .setColor(bot.settings.color.self),
+                            files: [{
+                                attachment: url,
+                                name: url
+                            }]
+                        });
+                    });
+
+                    //reply for attachments
+                    message.channel.send(new Discord.RichEmbed()
+                        .setTitle(`Your file has been sent.`)
+                        .setFooter(ty)
+                        .setColor(bot.settings.color.suc)
+                    );
+
+                }
+            }
+            break;
     }
 });
 
-client.login(discord_token);
-
+//login to discord servers
+bot.login(discord_token);
 
 const updateWelcome = () => {
-    const chnl = client.channels.get(client.settings.welcomeChannel);
+    const chnl = bot.channels.get(bot.settings.welcomeChannel);
     chnl.bulkDelete(2);
     chnl.send(new Discord.RichEmbed()
         .setTitle('Welcome to the znw Discord!')
         .setFooter(`We hope you enjoy your time on here. 💙`)
-        .setColor("#2d89ef")
-
+        .setColor(bot.settings.color.welcome)
     );
     chnl.setTopic('Make sure this channel is muted.')
 }
 
+const updateFeedback = () => {
+    const chnl = bot.channels.get(bot.settings.feedbackChannel);
+    chnl.bulkDelete(2);
+    chnl.send(new Discord.RichEmbed()
+        .setTitle('We appreciate your will for giving feedback.')
+        .setDescription(`Drop me a message to submit yours.\nAttachments are supported.📎\n👉<@${bot.user.id}>\n`)
+        .setFooter(`Note that we might not reply to every feedback. Thx 💜`)
+        .setColor(bot.settings.color.self)
+    );
+    chnl.setTopic('Make sure this channel is muted.')
+}
+
+const deleteOldmessages = async () => {
+    console.log("deleting expired messages...")
+
+    const olderThanDays = 2;
+    let channel;
+    for (const ch of bot.server.channels) {
+
+        if (ch[1].type === "text") {
+
+            await bot.channels.get(ch[1].id).fetchMessages()
+                .then(messages => messages.array().forEach(message => {
+                    if (message.createdTimestamp <= +new Date() - 1000 * 60 * 60 * 24 * (olderThanDays))
+                        message.delete();
+                }));
+        }
+    }
+}
+
 //--------------------------------------------------COLORS BOT
 
-const initRoles = (first) => {
+const initAssigner = (first) => {
     const CONFIG = {
         /**
          * Instructions on how to get this: https://redd.it/40zgse
@@ -137,19 +250,6 @@ const initRoles = (first) => {
         embedFooter: `🠟 click 🠟`,
 
         roles: ["cw", "mc"],
-
-        /**
-         * Set to "true" if you want all roles to be in a single embed
-         */
-        embed: false,
-
-        /**
-         * Set the embed color if the "embed" variable is et to "true"
-         * Format:
-         * 
-         * #dd9323
-         */
-        embedColor: "#eff4ff",
 
         /**
          * Set to "true" if you want to set a thumbnail in the embed
@@ -184,18 +284,16 @@ const initRoles = (first) => {
         });
     }
 
-    const chn = client.channels.get(client.settings.roleChannel);
+    const chn = bot.channels.get(bot.settings.roleChannel);
     const srv = chn.guild;
 
     const messages = generateMessages();
 
     chn.bulkDelete(messages.length + 2); //(+initial msg + 1 failsafe)
 
-    //chn.send(CONFIG.initialMessage);
-
     chn.send(new Discord.RichEmbed()
         .setTitle(`${CONFIG.initialMessage}`)
-        .setColor("#00aba9")
+        .setColor(bot.settings.color.assign)
     ).then(() => {
 
         for (const {
@@ -218,55 +316,66 @@ const initRoles = (first) => {
         MESSAGE_REACTION_REMOVE: 'messageReactionRemove',
     };
 
+    const popTitle = () => {
+        chn.setName("𝙖𝙨𝙨𝙞𝙜𝙣𝙢𝙚𝙣𝙩")
+    }
+    const resetTitle = () => {
+        chn.setName("𝘢𝘴𝘴𝘪𝘨𝘯𝘮𝘦𝘯𝘵");
+    }
+
     // This event handles adding/removing users from the role(s) they chose based on message reactions
-    if (first !== false)
-        client.on('raw', async event => {
+    if (first)
+        bot.on('raw', async event => {
             if (!events.hasOwnProperty(event.t)) return;
 
             const {
                 d: data
             } = event;
-            const user = client.users.get(data.user_id);
+            const user = bot.users.get(data.user_id);
 
-            const message = await chn.fetchMessage(data.message_id);
+            try {
+                const message = await chn.fetchMessage(data.message_id);
 
-            //only in assign channel
-            if (message.channel !== chn) return;
+                //only in assign channel
+                if (message.channel !== chn) return;
 
-            const member = srv.members.get(user.id);
+                const member = srv.members.get(user.id);
 
-            const emojiKey = (data.emoji.id) ? `${data.emoji.name}:${data.emoji.id}` : data.emoji.name;
-            let reaction = message.reactions.get(emojiKey);
+                const emojiKey = (data.emoji.id) ? `${data.emoji.name}:${data.emoji.id}` : data.emoji.name;
+                let reaction = message.reactions.get(emojiKey);
 
-            if (!reaction) {
-                // Create an object that can be passed through the event like normal
-                const emoji = new Discord.Emoji(client.guilds.get(data.guild_id), data.emoji);
-                reaction = new Discord.MessageReaction(message, emoji, 1, data.user_id === client.user.id);
-            }
-
-            if (
-                (message.author.id === client.user.id) && (message.content !== CONFIG.initialMessage ||
-                    (message.embeds[0]))
-            ) {
-
-                let role = message.content.replace(/[^0-9 a-z]/gi, '').trim() //`${message.content.split("⤙")[1].split("⤚")[0]}`;
-                if (role === "Cube World") role = "cw";
-
-                if (member.id !== client.user.id) {
-
-                    const guildRole = message.guild.roles.find(r => r.name === role);
-                    //if (event.t === "MESSAGE_REACTION_ADD") member.addRole(guildRole.id);
-                    //else if (event.t === "MESSAGE_REACTION_REMOVE") member.removeRole(guildRole.id);
-
-                    if (member.roles.has(guildRole.id))
-                        member.removeRole(guildRole.id);
-                    else member.addRole(guildRole.id);
-
-                    chn.setName("𝙖𝙨𝙨𝙞𝙜𝙣𝙢𝙚𝙣𝙩")
-                    initRoles(false);
-
+                if (!reaction) {
+                    // Create an object that can be passed through the event like normal
+                    const emoji = new Discord.Emoji(bot.guilds.get(data.guild_id), data.emoji);
+                    reaction = new Discord.MessageReaction(message, emoji, 1, data.user_id === bot.user.id);
                 }
-                chn.setName("𝘢𝘴𝘴𝘪𝘨𝘯𝘮𝘦𝘯𝘵");
+
+                if (
+                    (message.author.id === bot.user.id) && (message.content !== CONFIG.initialMessage ||
+                        (message.embeds[0]))
+                ) {
+
+                    let role = message.content.replace(/[^0-9 a-z]/gi, '').trim() //`${message.content.split("⤙")[1].split("⤚")[0]}`;
+                    if (role === "Cube World") role = "cw";
+
+                    if (member.id !== bot.user.id) {
+
+                        const guildRole = message.guild.roles.find(r => r.name === role);
+                        //if (event.t === "MESSAGE_REACTION_ADD") member.addRole(guildRole.id);
+                        //else if (event.t === "MESSAGE_REACTION_REMOVE") member.removeRole(guildRole.id);
+
+                        if (member.roles.has(guildRole.id))
+                            member.removeRole(guildRole.id);
+                        else member.addRole(guildRole.id);
+
+                        popTitle();
+                        initAssigner();
+
+                    }
+                    resetTitle();
+                }
+            } catch (ex) {
+
             }
         });
 }
@@ -278,20 +387,40 @@ process.on('unhandledRejection', err => {
     console.error("Unhandled Rejection", msg);
 });
 
-
-
 // Initialize the invite cache
 const invites = {};
 
-// A pretty useful method to create a delay without blocking the whole script.
-const wait = require('util').promisify(setTimeout);
-
-client.on('ready', () => {
+bot.on('ready', async () => {
     // "ready" isn't really ready. We need to wait a spell.
     wait(1000);
 
+    console.log("Connected!");
+
+    bot.owner = bot.guilds.first().ownerID;
+
+    bot.server = bot.guilds.first();
+
+    // const owner = await (bot.fetchUser(bot.owner))
+
+    //console.log(owner.get('avatarURL'))
+
+    //welcome channel msg
+    updateWelcome();
+    //assign bot
+    initAssigner(true);
+
+    //feedback channel msg
+    updateFeedback();
+
+    //reset flow channel title
+    resetFlow();
+
+    deleteOldmessages();
+
+    setInterval(deleteOldmessages, 60 * 1000 * 60 * (1)) //delete old messages every hour
+
     // Load all invites for all guilds and save them to the cache.
-    client.guilds.forEach(g => {
+    bot.guilds.forEach(g => {
         g.fetchInvites().then(guildInvites => {
             invites[g.id] = guildInvites;
         });
