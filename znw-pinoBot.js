@@ -30,14 +30,14 @@ bot.settings = {
     welcomeChannel: "615492208673554462",
     roleChannel: "615505311041585163",
     feedbackChannel: "617798936408752150",
-    color: {//color for embeds
-      self: "#7e3878",
-      suc:  "#00a300",
-      assign: "#f0a30a",
-      welcome: "#2d89ef",
-      flow_join: "#00aba9",
-      flow_leave:"#ff0097",
-      flow_game: "#FFD700" //gold
+    color: { //color for embeds
+        self: "#7e3878",
+        suc: "#00a300",
+        assign: "#f0a30a",
+        welcome: "#2d89ef",
+        flow_join: "#00aba9",
+        flow_leave: "#ff0097",
+        flow_game: "#FFD700" //gold
     }
 }
 
@@ -114,10 +114,10 @@ bot.on("message", message => {
             }
             break;
         case 'dm':
-      case 'group':
+        case 'group':
             {
                 const ty = `Thank you for choosing ${bot.user.username} 💜`;
-               
+
 
                 //regular msg
                 if (message.attachments.size === 0) {
@@ -157,8 +157,7 @@ bot.on("message", message => {
                                     ${'▔'.repeat(20)}
                                     Nachricht:
                                     ${'▔'.repeat(20)}\n${desc.length !== 0 ? desc : "(Keine Nachricht)"}
-                                    ${'▁'.repeat(20)}\nKlick für Antwort: <@${message.author.id}>`
-                                )
+                                    ${'▁'.repeat(20)}\nKlick für Antwort: <@${message.author.id}>`)
                                 .setTimestamp()
                                 .setColor(bot.settings.color.self),
                             files: [{
@@ -207,33 +206,22 @@ const updateFeedback = () => {
     chnl.setTopic('Make sure this channel is muted.')
 }
 
-const deleteOldmessages =  async () => {
-  console.log("deleting expired messages...")
-  
+const deleteOldmessages = async () => {
+    console.log("deleting expired messages...")
 
-  const olderThanDays = 2;
-  let channel;
-  for (const ch of bot.server.channels){
+    const olderThanDays = 2;
+    let channel;
+    for (const ch of bot.server.channels) {
 
-    if(ch[1].type === "text"){
-    
-      channel = await bot.channels.get(ch[1].id);
-     channel.fetchMessages()
-        .then(messages => messages.array().forEach(message =>{
-        if(message.createdTimestamp <= +new Date()-1000*60*60*24*(olderThanDays))
-          message.delete();
-      }
-        ));
-      
-      
+        if (ch[1].type === "text") {
+
+            await bot.channels.get(ch[1].id).fetchMessages()
+                .then(messages => messages.array().forEach(message => {
+                    if (message.createdTimestamp <= +new Date() - 1000 * 60 * 60 * 24 * (olderThanDays))
+                        message.delete();
+                }));
+        }
     }
-    
-          /*channel.fetchMessages()
-      .then(messages => messages.array().forEach(
-          message => message.timestamp.equals(client.user) && message.delete()
-      ));*/
-    
-  }
 }
 
 //--------------------------------------------------COLORS BOT
@@ -302,8 +290,6 @@ const initAssigner = (first) => {
     const messages = generateMessages();
 
     chn.bulkDelete(messages.length + 2); //(+initial msg + 1 failsafe)
-
-    //chn.send(CONFIG.initialMessage);
 
     chn.send(new Discord.RichEmbed()
         .setTitle(`${CONFIG.initialMessage}`)
@@ -404,7 +390,6 @@ process.on('unhandledRejection', err => {
 // Initialize the invite cache
 const invites = {};
 
-
 bot.on('ready', async () => {
     // "ready" isn't really ready. We need to wait a spell.
     wait(1000);
@@ -415,10 +400,10 @@ bot.on('ready', async () => {
 
     bot.server = bot.guilds.first();
 
-   // const owner = await (bot.fetchUser(bot.owner))
-    
-  //console.log(owner.get('avatarURL'))
-  
+    // const owner = await (bot.fetchUser(bot.owner))
+
+    //console.log(owner.get('avatarURL'))
+
     //welcome channel msg
     updateWelcome();
     //assign bot
@@ -431,9 +416,9 @@ bot.on('ready', async () => {
     resetFlow();
 
     deleteOldmessages();
- 
+
     setInterval(deleteOldmessages, 60 * 1000 * 60 * (1)) //delete old messages every hour
-  
+
     // Load all invites for all guilds and save them to the cache.
     bot.guilds.forEach(g => {
         g.fetchInvites().then(guildInvites => {
