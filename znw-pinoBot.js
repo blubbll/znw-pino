@@ -30,7 +30,15 @@ bot.settings = {
     welcomeChannel: "615492208673554462",
     roleChannel: "615505311041585163",
     feedbackChannel: "617798936408752150",
-    owner: ""
+    color: {//color for embeds
+      self: "#7e3878",
+      suc:  "#00a300",
+      assign: "#f0a30a",
+      welcome: "#2d89ef",
+      flow_join: "#00aba9",
+      flow_leave:"#ff0097",
+      flow_game: "#FFD700" //gold
+    }
 }
 
 bot.on("guildMemberAdd", member => {
@@ -43,7 +51,7 @@ bot.on("guildMemberAdd", member => {
         chnl.setName("𝙛𝙡𝙤𝙬 ▶");
         chnl.send(new Discord.RichEmbed()
             .setDescription(`▶ <@${member.id}>(${member.user.username}#${member.user.discriminator})`)
-            .setColor("#00aba9")
+            .setColor(bot.settings.color.flow_join)
         );
 
         if (invite.code === "UgaKDjS") {
@@ -57,7 +65,7 @@ bot.on("guildMemberAdd", member => {
                 currch.send(new Discord.RichEmbed()
                     .setTitle(`Another ${gamename} player!`)
                     .setDescription(`👋Welcome, <@${member.id}>`)
-                    .setColor("#FFD700") //gold
+                    .setColor(bot.settings.color.flow_game)
                 );
             });
 
@@ -72,7 +80,7 @@ bot.on("guildMemberRemove", member => {
     chnl.setName("𝙛𝙡𝙤𝙬 ◀");
     chnl.send(new Discord.RichEmbed()
         .setDescription(`◀ (${member.user.username}#${member.user.discriminator})`)
-        .setColor("#ff0097")
+        .setColor(bot.settings.color.flow_leave)
     );
 
     wait(4999);
@@ -106,45 +114,67 @@ bot.on("message", message => {
             }
             break;
         case 'dm':
+      case 'group':
             {
+                const ty = `Thank you for choosing ${bot.user.username} 💜`;
+               
+
                 //regular msg
-                if (message.attachments.size === 0)
+                if (message.attachments.size === 0) {
                     bot.users.get(bot.settings.owner).send(new Discord.RichEmbed()
-                        .setTitle(`Neues Feedback von (${message.author.username}#${message.author.discriminator})`)
-                        .setDescription(`${message.content}\n${'▔'.repeat(20)}\nKlick für Antwort: <@${message.author.id}>`)
+                        .setTitle(`Neues Feedback von (${message.author.username}#${message.author.discriminator}).`)
+                        .setDescription(`${message.content}\n${'▁'.repeat(20)}\nKlick für Antwort: <@${message.author.id}>`)
                         .setTimestamp()
-                        .setColor("#aa00ff")
+                        .setColor(bot.settings.color.self)
                     );
+
+                    //reply for msg
+                    message.channel.send(new Discord.RichEmbed()
+                        .setTitle(`Your feedback has been sent.`)
+                        .setDescription(`("${message.content}")`)
+                        .setFooter(ty)
+                        .setColor(bot.settings.color.suc)
+                    );
+
+                }
+
 
                 //message has attachments
                 else if (message.attachments.size > 0) {
 
                     message.attachments.forEach(attachment => {
-                      
+
                         // do something with the attachment
                         const url = attachment.url;
                         const desc = attachment.message.content
-                        console.log(desc)
 
-                    bot.users.get(bot.settings.owner).send(new Discord.RichEmbed()
-                        .setTitle(`Neues Feedback mit Anhang von (${message.author.username}#${message.author.discriminator}):`)
-                        .setDescription(desc)
-                        .setTimestamp()
-                        .setColor("#aa00ff")
+                        bot.users.get(bot.settings.owner).send({
+                            embed: new Discord.RichEmbed()
+                                .setTitle(`Anhang von (${message.author.username}#${message.author.discriminator}):`)
+                                .setDescription(`
+                                  Datei:
+                                    "${attachment.filename}"
+                                    ${'▔'.repeat(20)}
+                                    Nachricht:
+                                    ${'▔'.repeat(20)}\n${desc.length !== 0 ? desc : "(Keine Nachricht)"}
+                                    ${'▁'.repeat(20)}\nKlick für Antwort: <@${message.author.id}>`
+                                )
+                                .setTimestamp()
+                                .setColor(bot.settings.color.self),
+                            files: [{
+                                attachment: url,
+                                name: url
+                            }]
+                        });
+                    });
+
+                    //reply for attachments
+                    message.channel.send(new Discord.RichEmbed()
+                        .setTitle(`Your file has been sent.`)
+                        .setFooter(ty)
+                        .setColor(bot.settings.color.suc)
                     );
-                      
-                      bot.users.get(bot.settings.owner).send({embed: new Discord.RichEmbed()
-                            .setTitle(`Neues Feedback mit Bild von (${message.author.username}#${message.author.discriminator})`)
-                            .setDescription(attachment.message.content)
-                            .setTimestamp()
-                            .setColor("#aa00ff"),
-                        files: [{ attachment:url, name: url }] 
-                    });
-                      
-                    
-                      
-                      
-                    });
+
                 }
             }
             break;
@@ -160,22 +190,50 @@ const updateWelcome = () => {
     chnl.send(new Discord.RichEmbed()
         .setTitle('Welcome to the znw Discord!')
         .setFooter(`We hope you enjoy your time on here. 💙`)
-        .setColor("#2d89ef")
+        .setColor(bot.settings.color.welcome)
     );
     chnl.setTopic('Make sure this channel is muted.')
 }
 
 const updateFeedback = () => {
-
     const chnl = bot.channels.get(bot.settings.feedbackChannel);
     chnl.bulkDelete(2);
     chnl.send(new Discord.RichEmbed()
         .setTitle('We appreciate your will for giving feedback.')
-        .setDescription(`Send me a message to submit yours: <@${bot.user.id}>`)
+        .setDescription(`Drop me a message to submit yours.\nAttachments are supported.📎\n👉<@${bot.user.id}>\n`)
         .setFooter(`Note that we might not reply to every feedback. Thx 💜`)
-        .setColor("#76608a")
+        .setColor(bot.settings.color.self)
     );
     chnl.setTopic('Make sure this channel is muted.')
+}
+
+const deleteOldmessages =  async () => {
+  console.log("deleting expired messages...")
+  
+
+  const olderThanDays = 2;
+  let channel;
+  for (const ch of bot.server.channels){
+
+    if(ch[1].type === "text"){
+    
+      channel = await bot.channels.get(ch[1].id);
+     channel.fetchMessages()
+        .then(messages => messages.array().forEach(message =>{
+        if(message.createdTimestamp <= +new Date()-1000*60*60*24*(olderThanDays))
+          message.delete();
+      }
+        ));
+      
+      
+    }
+    
+          /*channel.fetchMessages()
+      .then(messages => messages.array().forEach(
+          message => message.timestamp.equals(client.user) && message.delete()
+      ));*/
+    
+  }
 }
 
 //--------------------------------------------------COLORS BOT
@@ -249,7 +307,7 @@ const initAssigner = (first) => {
 
     chn.send(new Discord.RichEmbed()
         .setTitle(`${CONFIG.initialMessage}`)
-        .setColor("#f0a30a")
+        .setColor(bot.settings.color.assign)
     ).then(() => {
 
         for (const {
@@ -271,7 +329,6 @@ const initAssigner = (first) => {
         MESSAGE_REACTION_ADD: 'messageReactionAdd',
         MESSAGE_REACTION_REMOVE: 'messageReactionRemove',
     };
-
 
     const popTitle = () => {
         chn.setName("𝙖𝙨𝙨𝙞𝙜𝙣𝙢𝙚𝙣𝙩")
@@ -348,14 +405,20 @@ process.on('unhandledRejection', err => {
 const invites = {};
 
 
-bot.on('ready', () => {
+bot.on('ready', async () => {
     // "ready" isn't really ready. We need to wait a spell.
     wait(1000);
 
     console.log("Connected!");
 
-    bot.settings.owner = bot.guilds.first().ownerID;
+    bot.owner = bot.guilds.first().ownerID;
 
+    bot.server = bot.guilds.first();
+
+   // const owner = await (bot.fetchUser(bot.owner))
+    
+  //console.log(owner.get('avatarURL'))
+  
     //welcome channel msg
     updateWelcome();
     //assign bot
@@ -367,6 +430,10 @@ bot.on('ready', () => {
     //reset flow channel title
     resetFlow();
 
+    deleteOldmessages();
+ 
+    setInterval(deleteOldmessages, 60 * 1000 * 60 * (1)) //delete old messages every hour
+  
     // Load all invites for all guilds and save them to the cache.
     bot.guilds.forEach(g => {
         g.fetchInvites().then(guildInvites => {
